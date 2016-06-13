@@ -1,0 +1,2 @@
+rl-ofc
+deuces>=1.0 -e git+git://github.com/nik000/deuces 
