@@ -1,7 +1,7 @@
 from deuces import Card, Evaluator
 
 
-rank_to_royalty = {
+rank_int_to_royalty = {
     0: 35,   # Royal flush
     1: 15,   # Straight flush
     2: 10,   # Four-of-a-kind
@@ -9,6 +9,9 @@ rank_to_royalty = {
     4: 4,    # Flush
     5: 2     # Straight
 }
+
+
+evaluator = Evaluator()
 
 
 class OFCHand(object):
@@ -30,7 +33,10 @@ class OFCHand(object):
         self.cards.append(Card.new(new_card_str))
 
     def get_raw_royalties(self):
-        pass
+        if len(self.cards) == 5:
+            rank = evaluator.evaluate([], self.cards)
+            rank_int = evaluator.get_rank_class(rank_class)
+            return rank_int_to_royalty[rank_int]
 
 
 class OFCBoard(object):
