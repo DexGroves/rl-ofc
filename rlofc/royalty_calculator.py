@@ -4,6 +4,7 @@ from deuces import Card, Evaluator
 
 evaluator = Evaluator()
 
+
 class RoyaltyCalculator(object):
     """Score royalties for back, mid and front.
     I would love to do this with evaluator.get_rank_class, but it's
@@ -70,4 +71,3 @@ class RoyaltyCalculator(object):
 
         if count == 3:
             return 10 + rank
-
