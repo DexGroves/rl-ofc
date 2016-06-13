@@ -1,3 +1,4 @@
+import collections
 from deuces import Card, Evaluator
 
 
@@ -45,7 +46,7 @@ class RoyaltyCalculator(object):
         rank = evaluator.evaluate([], cards)
 
         if rank > 2467:
-            return 2   # Nothing good enough
+            return 0   # Nothing good enough
 
         if rank > 1609:
             return 2   # Three-of-a-kind
