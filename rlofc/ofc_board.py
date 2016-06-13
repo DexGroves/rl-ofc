@@ -1,16 +1,6 @@
 from deuces import Card, Evaluator
 
 
-rank_int_to_royalty = {
-    0: 35,   # Royal flush
-    1: 15,   # Straight flush
-    2: 10,   # Four-of-a-kind
-    3: 6,    # Full house
-    4: 4,    # Flush
-    5: 2     # Straight
-}
-
-
 evaluator = Evaluator()
 
 
@@ -32,11 +22,37 @@ class OFCHand(object):
 
         self.cards.append(Card.new(new_card_str))
 
-    def get_raw_royalties(self):
+    def get_royalties(self):
         if len(self.cards) == 5:
-            rank = evaluator.evaluate([], self.cards)
-            rank_int = evaluator.get_rank_class(rank_class)
-            return rank_int_to_royalty[rank_int]
+            return self.get_royalties_5()
+        if len(self.cards) == 3:
+            return self.get_royalties_3()
+
+    def get_royalties_5(self):
+        rank = evaluator.evaluate([], self.cards)
+
+        # I would love to do this with evaluator.get_rank_class,
+        # but it's broken: https://github.com/worldveil/deuces/issues/9
+        if rank > 1609:
+            return 0   # Nothing good enough
+
+        if rank > 1599:
+            return 2   # Straight
+
+        if rank > 322:
+            return 4   # Flush
+
+        if rank > 166:
+            return 6   # Full house
+
+        if rank > 10:
+            return 10  # Four-of-a-kind
+
+        if rank > 1:
+            return 15  # Straight flush
+
+        if rank == 1:
+            return 35  # Royal flush
 
 
 class OFCBoard(object):
