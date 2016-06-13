@@ -2,15 +2,15 @@ from rlofc.ofc_board import OFCHand
 
 
 def test_five_card_royalties():
-    no_pair  = OFCHand(['Ah', 'Th', '8h', '5h', '4c'], 5)
+    no_pair  = OFCHand(['2h', '2c', '3d', '4d', '5d'], 5)
     one_pair = OFCHand(['Ah', 'Th', '8h', '5h', '5c'], 5)
     two_pair = OFCHand(['Ah', 'Th', 'Th', '5h', '5c'], 5)
     trips    = OFCHand(['Ah', 'Th', '8h', '8d', '8c'], 5)
     straight = OFCHand(['Ah', 'Kh', 'Qh', 'Jh', 'Tc'], 5)
     flush    = OFCHand(['Ah', 'Th', '8h', '5h', '4h'], 5)
     boat     = OFCHand(['Ah', 'As', 'Ac', '8d', '8c'], 5)
-    quads    = OFCHand(['Ah', 'As', 'Ac', 'Ad', '8c'], 5)
-    sf       = OFCHand(['6h', '2h', '3h', '4h', '5h'], 5)
+    quads    = OFCHand(['Ah', 'As', 'Ac', 'Ad', 'Kc'], 5)
+    sf       = OFCHand(['Ah', '2h', '3h', '4h', '5h'], 5)
     royal    = OFCHand(['Ah', 'Kh', 'Qh', 'Jh', 'Th'], 5)
 
     assert no_pair.get_royalties() == 0
