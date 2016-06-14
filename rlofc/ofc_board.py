@@ -47,6 +47,18 @@ class OFCBoard(object):
 
         return royalty_total
 
+    def get_free_streets(self):
+        """Return a binary list of available streets, FMB."""
+        available = [
+            1 if self.front.length() < 3 else 0,
+            1 if self.mid.length() < 5 else 0,
+            1 if self.back.length() < 5 else 0
+        ]
+
+        return available
+
+
+
     def is_complete(self):
         if self.back.length() == 5 and \
                 self.mid.length() == 5 and \
