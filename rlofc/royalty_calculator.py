@@ -1,8 +1,9 @@
 import collections
-from deuces import Card, Evaluator
+from deuces import Card
+from rlofc.ofc_evaluator import OFCEvaluator
 
 
-evaluator = Evaluator()
+evaluator = OFCEvaluator()
 
 
 class RoyaltyCalculator(object):
