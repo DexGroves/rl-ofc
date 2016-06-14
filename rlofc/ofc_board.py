@@ -1,5 +1,9 @@
 from deuces import Card
 from rlofc.royalty_calculator import RoyaltyCalculator
+from rlofc.ofc_evaluator import OFCEvaluator
+
+
+evaluator = OFCEvaluator()
 
 
 class OFCHand(object):
@@ -15,6 +19,9 @@ class OFCHand(object):
 
     def length(self):
         return len(self.cards)
+
+    def get_rank(self):
+        return evaluator.evaluate(self.cards, [])
 
 
 class OFCBoard(object):
@@ -46,3 +53,14 @@ class OFCBoard(object):
                 self.front.length() == 3:
             return True
         return False
+
+    def is_foul(self):
+        if not self.is_complete():
+            raise ValueError("Board is incomplete!")
+
+        if self.front.get_rank() >= \
+                self.mid.get_rank() >= \
+                self.back.get_rank():
+            return False
+
+        return True
