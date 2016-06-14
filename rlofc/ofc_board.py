@@ -27,6 +27,19 @@ class OFCHand(object):
 class OFCBoard(object):
     """Represent the three streets of an OFC game for one player."""
 
+    def __init__(self):
+        self.front = OFCHand([])
+        self.mid = OFCHand([])
+        self.back = OFCHand([])
+
+    def pretty(self):
+        print 'Front:'
+        Card.print_pretty_cards(self.front.cards)
+        print 'Mid:'
+        Card.print_pretty_cards(self.mid.cards)
+        print 'Back:'
+        Card.print_pretty_cards(self.back.cards)
+
     def set_front(self, cards):
         self.front = OFCHand(cards)
 
@@ -57,8 +70,6 @@ class OFCBoard(object):
 
         return available
 
-
-
     def is_complete(self):
         if self.back.length() == 5 and \
                 self.mid.length() == 5 and \
@@ -76,3 +87,4 @@ class OFCBoard(object):
             return False
 
         return True
+
