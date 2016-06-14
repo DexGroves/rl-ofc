@@ -28,6 +28,9 @@ class OFCBoard(object):
     """Represent the three streets of an OFC game for one player."""
 
     def __init__(self):
+        self.clear()
+
+    def clear(self):
         self.front = OFCHand([])
         self.mid = OFCHand([])
         self.back = OFCHand([])

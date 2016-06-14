@@ -34,3 +34,8 @@ class OFCRandomPolicy(OFCPolicy):
 
         if street == 2:
             self.board.back.add_card(card)
+
+
+class OFCRLPolicy(OFCPolicy):
+    """Insert neural network here."""
+    pass
