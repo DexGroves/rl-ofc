@@ -1,4 +1,4 @@
-from deuces import Card, Evaluator
+from deuces import Card
 from rlofc.royalty_calculator import RoyaltyCalculator
 
 
@@ -15,6 +15,7 @@ class OFCHand(object):
 
     def length(self):
         return len(self.cards)
+
 
 class OFCBoard(object):
     """Represent the three streets of an OFC game for one player."""

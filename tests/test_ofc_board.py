@@ -23,4 +23,3 @@ def test_get_royalties():
     board.set_back(['Ah', '2h', '3h', '4h', '5h'])
 
     assert board.get_royalties() == 18
-
