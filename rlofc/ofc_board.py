@@ -43,15 +43,6 @@ class OFCBoard(object):
         print 'Back:'
         Card.print_pretty_cards(self.back.cards)
 
-    def set_front(self, cards):
-        self.front = OFCHand(cards)
-
-    def set_mid(self, cards):
-        self.mid = OFCHand(cards)
-
-    def set_back(self, cards):
-        self.back = OFCHand(cards)
-
     def get_royalties(self):
         if not self.is_complete():
             raise ValueError("Board is incomplete!")
@@ -73,6 +64,14 @@ class OFCBoard(object):
 
         return available
 
+    def place_card_by_id(self, card, street_id):
+        if street_id == 0:
+            self.front.add_card(card)
+        if street_id == 1:
+            self.mid.add_card(card)
+        if street_id == 2:
+            self.back.add_card(card)
+
     def is_complete(self):
         if self.back.length() == 5 and \
                 self.mid.length() == 5 and \
@@ -91,3 +90,11 @@ class OFCBoard(object):
 
         return True
 
+    def set_front(self, cards):
+        self.front = OFCHand(cards)
+
+    def set_mid(self, cards):
+        self.mid = OFCHand(cards)
+
+    def set_back(self, cards):
+        self.back = OFCHand(cards)
