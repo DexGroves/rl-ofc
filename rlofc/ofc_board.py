@@ -89,12 +89,3 @@ class OFCBoard(object):
             return False
 
         return True
-
-    def set_front(self, cards):
-        self.front = OFCHand(cards)
-
-    def set_mid(self, cards):
-        self.mid = OFCHand(cards)
-
-    def set_back(self, cards):
-        self.back = OFCHand(cards)
