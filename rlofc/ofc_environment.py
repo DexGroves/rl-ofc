@@ -1,5 +1,57 @@
+import random
 from rlofc.deck_generator import DeckGenerator
 from rlofc.ofc_board import OFCBoard
+
+
+class OFCEnv(object):
+    """Handle an OFC game in a manner condusive to PG RL."""
+
+    def __init__(self, opponent):
+        self.opponent = opponent
+        self.reset()
+
+    def reset(self):
+        self.plyr_board = OFCBoard()
+        self.oppo_board = OFCBoard()
+
+        self.deck = DeckGenerator.new_deck()
+        self.plyr_cards = sorted(self.deck[0:5])
+        self.oppo_cards = sorted(self.deck[6:11])
+
+        self.current_card = self.plyr_cards.pop()
+
+        self.plyr_goes_first = random.choice([0, 1])
+
+        if self.plyr_goes_first == 0:
+            self.execute_opponent_turn()
+
+    def step(self, action):
+        """Advance the game state by one decision."""
+        self.plyr_board.place_card_by_id(self.current_card, action)
+
+        # Only do opponent turn if we have no cards left to lay
+        if len(self.plyr_cards) == 0:
+            self.plyr_cards.append(self.deck.pop())
+            self.execute_opponent_turn()
+
+        self.current_card = self.plyr_cards.pop()
+
+    def observe(self):
+        """Return information about the game state."""
+        game_state = (self.plyr_board,
+                      self.oppo_board,
+                      self.current_card,  # Current decision card
+                      self.plyr_cards)    # i.e. remaining starting hand
+        return game_state
+
+    def execute_opponent_turn(self):
+        if len(self.oppo_cards) == 0:
+            self.oppo_cards.append(self.deck.pop())
+
+        while len(self.oppo_cards) > 0:
+            oppo_card = self.oppo_cards.pop()
+            oppo_action = random.choice([0, 1, 2])  # For now!
+            self.oppo_board.place_card_by_id(oppo_card, oppo_action)
 
 
 class OFCEnvironment(object):
