@@ -7,7 +7,8 @@ from keras.layers import Convolution2D, Dense, Flatten, Input, merge, Lambda, Ti
 from keras.optimizers import RMSprop, Adadelta, Adam
 
 from rlofc.ofc_environment import OFCEnv
-from rlofc.gamestate_encoder import GamestateRankSuitEncoder, GamestateStreetsonlyEncoder
+from rlofc.gamestate_encoder import GamestateRankSuitEncoder
+from rlofc.gamestate_encoder import GamestateSelfranksonlyEncoder
 
 
 def simple_pgnet(input_dim,
@@ -30,7 +31,7 @@ niter = 1000000
 
 env = OFCEnv([])
 # encoder = GamestateRankSuitEncoder()
-encoder = GamestateStreetsonlyEncoder()
+encoder = GamestateSelfranksonlyEncoder()
 
 model = simple_pgnet(encoder.dim, action_space)
 
@@ -47,8 +48,9 @@ for i in xrange(niter):
     plyr_board, oppo_board, cur_card, cards, game_over, reward = observation
     x = encoder.encode(*observation)
 
-    # Sample an action
+    # Sample an action from legal moves
     aprob = model.predict(x.reshape([1, encoder.dim]), batch_size=1)
+    aprob *= plyr_board.get_free_streets()
     action = np.random.choice(action_space, 1, p=(aprob / np.sum(aprob))[0])
     action = random.choice(plyr_board.get_free_street_indices())
     # Calculate harsh grad

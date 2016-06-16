@@ -130,7 +130,7 @@ class GamestateRankSuitEncoder(GamestateEncoder):
         return encoding
 
 
-class GamestateStreetsonlyEncoder(object):
+class GamestateStreetsonlyEncoder(GamestateEncoder):
     """Just return which streets are open."""
 
     def __init__(self):
@@ -142,3 +142,32 @@ class GamestateStreetsonlyEncoder(object):
         free_streets_std = (free_streets - 0.5) * 2  # Hacky "standardisation"
 
         return np.array(free_streets_std)
+
+
+class GamestateSelfranksonlyEncoder(GamestateEncoder):
+    """Return only self ranks."""
+
+    def __init__(self):
+        self.dim = 17
+
+    def encode(self, plyr_board, oppo_board, current_card,
+               plyr_cards, game_over, score):
+        current_card = [Card.new(current_card)]
+        plyr_front_ranks = self.cards_to_ranks(plyr_board.front.cards, 3)
+        plyr_mid_ranks = self.cards_to_ranks(plyr_board.mid.cards, 5)
+        plyr_back_ranks = self.cards_to_ranks(plyr_board.back.cards, 5)
+
+        current_card_rank = self.cards_to_ranks(current_card, 1)
+
+        free_streets = np.array(plyr_board.get_free_streets())
+        free_streets_std = (free_streets - 0.5) * 2  # Hacky "standardisation"
+
+        encoding = np.hstack([
+            plyr_front_ranks,
+            plyr_mid_ranks,
+            plyr_back_ranks,
+            current_card_rank,
+            free_streets_std
+        ])
+
+        return encoding
