@@ -31,6 +31,13 @@ class GamestateEncoder(object):
         suit_dummy_std = (suit_dummy - 1.5) / 2  # Hacky "standardisation"
         return suit_dummy_std
 
+    @staticmethod
+    def card_to_ranks_binary(card):
+        out = np.zeros(13)
+        rank = Card.get_rank_int(card)
+        out[rank] = 1
+        return out
+
 
 class GamestateBinaryEncoder(GamestateEncoder):
     """Encode the output of an env.observe as a 1x416 binary matrix.
@@ -168,6 +175,25 @@ class GamestateSelfranksonlyEncoder(GamestateEncoder):
             plyr_back_ranks,
             current_card_rank,
             free_streets_std
+        ])
+
+        return encoding
+
+
+class SelfRankBinaryEncoder(GamestateEncoder):
+    """Return self rank information in binary form."""
+
+    def __init__(self):
+        self.dim = 13
+
+    def encode(self, plyr_board, oppo_board, current_card,
+               plyr_cards, game_over, score):
+        current_card = Card.new(current_card)
+
+        current_card_binary = self.card_to_ranks_binary(current_card)
+
+        encoding = np.hstack([
+            current_card_binary
         ])
 
         return encoding

@@ -5,16 +5,18 @@ from keras.layers.core import Dense, Dropout, Activation, Flatten, Reshape
 from keras.models import Model
 from keras.layers import Convolution2D, Dense, Flatten, Input, merge, Lambda, TimeDistributed
 from keras.optimizers import RMSprop, Adadelta, Adam
+from keras.regularizers import l2, activity_l2
 
 from rlofc.ofc_environment import OFCEnv
 from rlofc.gamestate_encoder import GamestateRankSuitEncoder
 from rlofc.gamestate_encoder import GamestateSelfranksonlyEncoder
+from rlofc.gamestate_encoder import SelfRankBinaryEncoder
 
 
 def simple_pgnet(input_dim,
                  action_space,
                  hidden_size=10,
-                 dropout=0.0,
+                 dropout=0.5,
                  learning_rate=1e-4):
     """Karpathy-approved PGNet. From kerlym."""
     S = Input(shape=[input_dim])
@@ -26,18 +28,54 @@ def simple_pgnet(input_dim,
     return model
 
 
+def simple_pg_regnet(input_dim,
+                     action_space,
+                     hidden_size=10,
+                     dropout=0.5,
+                     learning_rate=1e-4):
+    """Karpathy-approved PGNet. From kerlym."""
+    S = Input(shape=[input_dim])
+    h = Dense(hidden_size, activation='tanh', W_regularizer=l2(0.01),
+              init='he_normal')(S)
+    h = Dropout(dropout)(h)
+    V = Dense(action_space, activation='sigmoid')(h)
+    model = Model(S, V)
+    model.compile(loss='mse', optimizer=RMSprop(lr=learning_rate))
+    return model
+
+
+def simple_pgnet_2layer(input_dim,
+                        action_space,
+                        hidden_size=40,
+                        dropout=0.5,
+                        learning_rate=1e-6):
+    """Karpathy-approved PGNet. From kerlym."""
+    S = Input(shape=[input_dim])
+    h1 = Dense(hidden_size, activation='tanh', init='he_normal')(S)
+    h1 = Dropout(dropout)(h1)
+    h2 = Dense(hidden_size, activation='tanh', init='he_normal')(h1)
+    h2 = Dropout(dropout)(h1)
+    V = Dense(action_space, activation='sigmoid', init='zero')(h2)
+    model = Model(S, V)
+    model.compile(loss='mse', optimizer=RMSprop(lr=learning_rate))
+    return model
+
+
 action_space = 3
 niter = 1000000
 
 env = OFCEnv([])
 # encoder = GamestateRankSuitEncoder()
-encoder = GamestateSelfranksonlyEncoder()
+# encoder = GamestateSelfranksonlyEncoder()
+encoder = SelfRankBinaryEncoder()
 
-model = simple_pgnet(encoder.dim, action_space)
+model = simple_pg_regnet(encoder.dim, action_space)
 
 # Initialize
 reward_tracker = []
 xs, hs, dlogps, drs = [], [], [], []
+
+# Tracking
 running_reward = None
 reward_sum = 0
 episode_number = 0
@@ -50,9 +88,10 @@ for i in xrange(niter):
 
     # Sample an action from legal moves
     aprob = model.predict(x.reshape([1, encoder.dim]), batch_size=1)
-    aprob *= plyr_board.get_free_streets()
-    action = np.random.choice(action_space, 1, p=(aprob / np.sum(aprob))[0])
-    action = random.choice(plyr_board.get_free_street_indices())
+    aprob_legal = aprob * plyr_board.get_free_streets()
+    action = np.random.choice(action_space, 1,
+                              p=(aprob_legal / np.sum(aprob_legal))[0])
+
     # Calculate harsh grad
     y = np.zeros([action_space])
     y[action] = 1
@@ -98,14 +137,30 @@ for i in xrange(niter):
         model.fit(epx, epdlogp, nb_epoch=1, verbose=0, shuffle=True)
 
         # Book-keeping
-        # running_reward = reward_sum if running_reward is None \
-        #     else running_reward * 0.99 + reward_sum * 0.01
+        running_reward = reward_sum if running_reward is None \
+            else running_reward * 0.99 + reward_sum * 0.01
         # print 'resetting env. running mean: %f' \
         #     % (running_reward)
-        print "Iter %d\trun average: %f\ttot average %f" % \
-            (episode_number, np.mean(reward_tracker[-500:]), np.mean(reward_tracker))
+        if episode_number % 100 == 0:
+            print "Iter:%d\trun average: %f\ttot average %f\trun rew %f" % \
+                (episode_number,
+                    np.mean(reward_tracker[-5000:]),
+                    np.mean(reward_tracker),
+                    running_reward)
+
+            for i in range(13):
+                encoding = np.zeros(13)
+                encoding[i] = 13
+                aprob = model.predict(encoding.reshape([1, encoder.dim]),
+                                      batch_size=1)
+                p = (aprob / np.sum(aprob))[0]
+                print i, p
+
         # if episode_number % 100 == 0:
         #     save()
         reward_sum = 0
 
         env.reset()
+
+
+
