@@ -64,6 +64,16 @@ class OFCBoard(object):
 
         return available
 
+    def get_free_street_indices(self):
+        available = []
+        if self.front.length() < 3:
+            available.append(0)
+        if self.mid.length() < 5:
+            available.append(1)
+        if self.back.length() < 5:
+            available.append(2)
+        return available
+
     def place_card_by_id(self, card, street_id):
         if street_id == 0:
             self.front.add_card(card)

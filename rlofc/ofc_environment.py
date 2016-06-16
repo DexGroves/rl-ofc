@@ -14,6 +14,9 @@ class OFCEnv(object):
         self.plyr_board = OFCBoard()
         self.oppo_board = OFCBoard()
 
+        self.game_over = False
+        self.points = None
+
         self.deck = DeckGenerator.new_deck()
         self.plyr_cards = sorted(self.deck[0:5])
         self.oppo_cards = sorted(self.deck[6:11])
@@ -34,24 +37,78 @@ class OFCEnv(object):
             self.plyr_cards.append(self.deck.pop())
             self.execute_opponent_turn()
 
-        self.current_card = self.plyr_cards.pop()
+        if len(self.deck) > 35:
+            self.current_card = self.plyr_cards.pop()
+        else:
+            self.current_card = None
+            self.execute_endgame()
 
     def observe(self):
         """Return information about the game state."""
         game_state = (self.plyr_board,
                       self.oppo_board,
                       self.current_card,  # Current decision card
-                      self.plyr_cards)    # i.e. remaining starting hand
+                      self.plyr_cards,    # i.e. remaining starting hand
+                      self.game_over,     # Whether the game is over
+                      self.points)        # Score, or None
         return game_state
 
     def execute_opponent_turn(self):
-        if len(self.oppo_cards) == 0:
-            self.oppo_cards.append(self.deck.pop())
+        if not self.oppo_board.is_complete():
+            if len(self.oppo_cards) == 0:
+                self.oppo_cards.append(self.deck.pop())
 
-        while len(self.oppo_cards) > 0:
-            oppo_card = self.oppo_cards.pop()
-            oppo_action = random.choice([0, 1, 2])  # For now!
-            self.oppo_board.place_card_by_id(oppo_card, oppo_action)
+            while len(self.oppo_cards) > 0:
+                oppo_card = self.oppo_cards.pop()
+                free_streets = self.oppo_board.get_free_street_indices()
+                oppo_action = random.choice(free_streets)  # For now!
+                self.oppo_board.place_card_by_id(oppo_card, oppo_action)
+
+    def execute_endgame(self):
+        self.points = self.calculate_score()
+        self.game_over = True
+
+    def calculate_score(self):
+        plyr_royalties = self.plyr_board.get_royalties()
+        oppo_royalties = self.oppo_board.get_royalties()
+
+        if self.plyr_board.is_foul() and self.oppo_board.is_foul():
+            score = 0
+
+        elif self.plyr_board.is_foul():
+            score = (-1 * oppo_royalties) - 6
+
+        elif self.oppo_board.is_foul():
+            score = plyr_royalties + 6
+
+        else:
+            exch = self.calculate_scoop(self.plyr_board,
+                                        self.oppo_board)
+            score = exch + plyr_royalties - oppo_royalties
+
+        return score
+
+    def calculate_scoop(self, lhs_board, rhs_board):
+        lhs_won = 0
+
+        lhs_won += self.calculate_street(lhs_board.front, rhs_board.front)
+        lhs_won += self.calculate_street(lhs_board.mid, rhs_board.mid)
+        lhs_won += self.calculate_street(lhs_board.back, rhs_board.back)
+
+        if lhs_won in [3, -3]:   # Scoop, one way or the other
+            lhs_won = lhs_won * 2
+
+        return lhs_won
+
+    def calculate_street(self, lhs_hand, rhs_hand):
+        lhs_rank = lhs_hand.get_rank()
+        rhs_rank = rhs_hand.get_rank()
+
+        if lhs_rank < rhs_rank:
+            return 1
+        if rhs_rank < lhs_rank:
+            return -1
+        return 0
 
 
 class OFCEnvironment(object):
