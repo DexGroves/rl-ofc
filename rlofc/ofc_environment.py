@@ -15,7 +15,7 @@ class OFCEnv(object):
         self.oppo_board = OFCBoard()
 
         self.game_over = False
-        self.points = None
+        self.reward = 0
 
         self.deck = DeckGenerator.new_deck()
         self.plyr_cards = sorted(self.deck[0:5])
@@ -50,7 +50,7 @@ class OFCEnv(object):
                       self.current_card,  # Current decision card
                       self.plyr_cards,    # i.e. remaining starting hand
                       self.game_over,     # Whether the game is over
-                      self.points)        # Score, or None
+                      self.reward)        # Score, or None
         return game_state
 
     def execute_opponent_turn(self):
@@ -61,11 +61,12 @@ class OFCEnv(object):
             while len(self.oppo_cards) > 0:
                 oppo_card = self.oppo_cards.pop()
                 free_streets = self.oppo_board.get_free_street_indices()
-                oppo_action = random.choice(free_streets)  # For now!
+                # oppo_action = random.choice(free_streets)  # For now!
+                oppo_action = 2
                 self.oppo_board.place_card_by_id(oppo_card, oppo_action)
 
     def execute_endgame(self):
-        self.points = self.calculate_score()
+        self.reward = self.calculate_score()
         self.game_over = True
 
     def calculate_score(self):

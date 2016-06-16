@@ -45,7 +45,7 @@ class OFCBoard(object):
 
     def get_royalties(self):
         if not self.is_complete():
-            raise ValueError("Board is incomplete!")
+            return 0
 
         royalty_total = \
             RoyaltyCalculator.score_front_royalties(self.front.cards) + \

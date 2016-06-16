@@ -14,6 +14,8 @@ class GamestateEncoder(object):
         # Add one to distinguish deuce from missing
         cards = sorted([Card.get_rank_int(x) for x in cards])
         for i, card in enumerate(cards):
+            if i >= pad:
+                continue
             rank_dummy[i] = card + 1
         rank_dummy_std = (rank_dummy - 8) / 14  # Hacky "standardisation"
         return rank_dummy_std
@@ -126,3 +128,17 @@ class GamestateRankSuitEncoder(GamestateEncoder):
         ])
 
         return encoding
+
+
+class GamestateStreetsonlyEncoder(object):
+    """Just return which streets are open."""
+
+    def __init__(self):
+        self.dim = 3
+
+    def encode(self, plyr_board, oppo_board, current_card,
+               plyr_cards, game_over, score):
+        free_streets = np.array(plyr_board.get_free_streets())
+        free_streets_std = (free_streets - 0.5) * 2  # Hacky "standardisation"
+
+        return np.array(free_streets_std)
