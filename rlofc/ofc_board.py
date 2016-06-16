@@ -81,7 +81,7 @@ class OFCBoard(object):
 
     def is_foul(self):
         if not self.is_complete():
-            raise ValueError("Board is incomplete!")
+            return True
 
         if self.front.get_rank() >= \
                 self.mid.get_rank() >= \
