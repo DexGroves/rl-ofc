@@ -188,9 +188,11 @@ class SelfRankBinaryEncoder(GamestateEncoder):
 
     def encode(self, plyr_board, oppo_board, current_card,
                plyr_cards, game_over, score):
-        current_card = Card.new(current_card)
-
-        current_card_binary = self.card_to_ranks_binary(current_card)
+        if current_card is not None:
+            current_card = Card.new(current_card)
+            current_card_binary = self.card_to_ranks_binary(current_card)
+        else:
+            current_card_binary = np.zeros(13)
 
         encoding = np.hstack([
             current_card_binary

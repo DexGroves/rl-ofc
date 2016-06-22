@@ -28,39 +28,6 @@ def simple_pgnet(input_dim,
     return model
 
 
-def simple_pg_regnet(input_dim,
-                     action_space,
-                     hidden_size=10,
-                     dropout=0.5,
-                     learning_rate=1e-4):
-    """Karpathy-approved PGNet. From kerlym."""
-    S = Input(shape=[input_dim])
-    h = Dense(hidden_size, activation='tanh', W_regularizer=l2(0.01),
-              init='he_normal')(S)
-    h = Dropout(dropout)(h)
-    V = Dense(action_space, activation='sigmoid')(h)
-    model = Model(S, V)
-    model.compile(loss='mse', optimizer=RMSprop(lr=learning_rate))
-    return model
-
-
-def simple_pgnet_2layer(input_dim,
-                        action_space,
-                        hidden_size=40,
-                        dropout=0.5,
-                        learning_rate=1e-6):
-    """Karpathy-approved PGNet. From kerlym."""
-    S = Input(shape=[input_dim])
-    h1 = Dense(hidden_size, activation='tanh', init='he_normal')(S)
-    h1 = Dropout(dropout)(h1)
-    h2 = Dense(hidden_size, activation='tanh', init='he_normal')(h1)
-    h2 = Dropout(dropout)(h1)
-    V = Dense(action_space, activation='sigmoid', init='zero')(h2)
-    model = Model(S, V)
-    model.compile(loss='mse', optimizer=RMSprop(lr=learning_rate))
-    return model
-
-
 action_space = 3
 niter = 1000000
 
