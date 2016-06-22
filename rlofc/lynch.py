@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+import os
+os.environ["KERAS_BACKEND"] = "tensorflow"
+
+
 from skimage.transform import resize
 from skimage.color import rgb2gray
 import threading
@@ -29,7 +33,7 @@ SHOW_TRAINING = False
 
 # Experiment params
 ACTIONS = 3
-NUM_CONCURRENT = 8
+NUM_CONCURRENT = 1
 NUM_EPISODES = 2000
 
 AGENT_HISTORY_LENGTH = 13
@@ -149,7 +153,7 @@ def actor_learner_thread(num, env, session, graph_ops, summary_ops, saver):
             env.step(action_index)
             observation = env.observe()
             plyr_board, oppo_board, cur_card, cards, terminal, r_t = observation
-            print cur_card
+
             s_t1 = encoder.encode(*observation)
 
             ep_reward += r_t

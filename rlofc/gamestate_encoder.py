@@ -184,7 +184,7 @@ class SelfRankBinaryEncoder(GamestateEncoder):
     """Return self rank information in binary form."""
 
     def __init__(self):
-        self.dim = 13
+        self.dim = 16
 
     def encode(self, plyr_board, oppo_board, current_card,
                plyr_cards, game_over, score):
@@ -194,8 +194,12 @@ class SelfRankBinaryEncoder(GamestateEncoder):
         else:
             current_card_binary = np.zeros(13)
 
+        free_streets = np.array(plyr_board.get_free_streets())
+        free_streets_std = (free_streets - 0.5) * 2  # Hacky "standardisation"
+
         encoding = np.hstack([
-            current_card_binary
+            current_card_binary,
+            free_streets_std
         ])
 
         return encoding
