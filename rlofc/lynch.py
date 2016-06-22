@@ -20,23 +20,27 @@ from keras import backend as K
 from rlofc.ofc_environment import OFCEnv
 from rlofc.gamestate_encoder import SelfRankBinaryEncoder
 
+
+# RLOFC stuff
+encoder = SelfRankBinaryEncoder()
+
 # Path params
 EXPERIMENT_NAME = "rlofc"
 SUMMARY_SAVE_PATH = "summaries/"+EXPERIMENT_NAME
 CHECKPOINT_SAVE_PATH = "/tmp/"+EXPERIMENT_NAME+".ckpt"
 CHECKPOINT_NAME = "/tmp/" + EXPERIMENT_NAME + ".ckpt-5"
-CHECKPOINT_INTERVAL=5000
-SUMMARY_INTERVAL=5
+CHECKPOINT_INTERVAL=50
+SUMMARY_INTERVAL=10
 
 TRAINING = True
 SHOW_TRAINING = False
 
 # Experiment params
 ACTIONS = 3
-NUM_CONCURRENT = 1
-NUM_EPISODES = 2000
+NUM_CONCURRENT = 8
+NUM_EPISODES = 200
 
-AGENT_HISTORY_LENGTH = 13
+AGENT_HISTORY_LENGTH = encoder.dim
 
 # DQN Params
 GAMMA = 0.99
@@ -48,9 +52,6 @@ LEARNING_RATE = 0.0001
 T = 0
 TMAX = 80000000
 t_max = 32
-
-# RLOFC stuff
-encoder = SelfRankBinaryEncoder()
 
 
 def build_policy_and_value_networks(num_actions, agent_history_length):
@@ -118,6 +119,7 @@ def actor_learner_thread(num, env, session, graph_ops, summary_ops, saver):
     ep_avg_v = 0
     v_steps = 0
     ep_t = 0
+    running_reward = None
 
     probs_summary_t = 0
 
@@ -145,7 +147,7 @@ def actor_learner_thread(num, env, session, graph_ops, summary_ops, saver):
             a_t[action_index] = 1
 
             if probs_summary_t % 100 == 0:
-                print "P, ", np.max(probs), "V ", session.run(v_network, feed_dict={s: [s_t]})[0][0]
+                print "P, ", np.max(probs), "V ", session.run(v_network, feed_dict={s: [s_t]})[0][0], "R ", running_reward
 
             s_batch.append(s_t)
             a_batch.append(a_t)
@@ -189,17 +191,21 @@ def actor_learner_thread(num, env, session, graph_ops, summary_ops, saver):
         if terminal:
             # Episode ended, collect stats and reset game
             session.run(update_ep_reward, feed_dict={r_summary_placeholder: ep_reward})
-            print "THREAD:", num, "/ TIME", T, "/ REWARD", ep_reward
+            # print "THREAD:", num, "/ TIME", T, "/ REWARD", ep_reward
 
             env.reset()
             observation = env.observe()
             plyr_board, oppo_board, cur_card, cards, terminal, r_t = observation
             s_t = encoder.encode(*observation)
 
+            running_reward = ep_reward if running_reward is None \
+                else running_reward * 0.99 + ep_reward * 0.01
+
             terminal = False
             # Reset per-episode counters
             ep_reward = 0
             ep_t = 0
+
 
 
 def build_graph():
@@ -304,16 +310,16 @@ def evaluation(session, graph_ops, saver):
 
 
 def main(_):
-  g = tf.Graph()
-  with g.as_default(), tf.Session() as session:
-    K.set_session(session)
-    graph_ops = build_graph()
-    saver = tf.train.Saver()
+    g = tf.Graph()
+    with g.as_default(), tf.Session() as session:
+        K.set_session(session)
+        graph_ops = build_graph()
+        saver = tf.train.Saver()
 
-    if TRAINING:
-        train(session, graph_ops, saver)
-    else:
-        evaluation(session, graph_ops, saver)
+        if TRAINING:
+            train(session, graph_ops, saver)
+        else:
+            evaluation(session, graph_ops, saver)
 
 if __name__ == "__main__":
-  tf.app.run()
+    tf.app.run()

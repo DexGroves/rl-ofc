@@ -61,8 +61,8 @@ class OFCEnv(object):
             while len(self.oppo_cards) > 0:
                 oppo_card = self.oppo_cards.pop()
                 free_streets = self.oppo_board.get_free_street_indices()
-                oppo_action = random.choice(free_streets)  # For now!
-                # oppo_action = 2
+                # oppo_action = random.choice(free_streets)  # For now!
+                oppo_action = 2
                 self.oppo_board.place_card_by_id(oppo_card, oppo_action)
 
     def execute_endgame(self):
