@@ -6,7 +6,9 @@ from rlofc.ofc_board import OFCBoard
 class OFCEnv(object):
     """Handle an OFC game in a manner condusive to PG RL."""
 
-    def __init__(self, opponent):
+    def __init__(self, opponent, encoder_class=None):
+        if encoder_class is not None:
+            self.encoder = encoder_class()
         self.opponent = opponent
         self.reset()
 
