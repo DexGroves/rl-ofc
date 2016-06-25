@@ -5,32 +5,36 @@ import time
 import tensorflow as tf
 import numpy as np
 import os
-os.environ["KERAS_BACKEND"] = "tensorflow"
 
 from collections import Counter
+from rlofc.ofc_environment import OFCEnv
+from rlofc.gamestate_encoder import SelfRankBinaryEncoder
+
+os.environ["KERAS_BACKEND"] = "tensorflow"
 from keras import backend as K
 from keras.layers import Dense, Input
 from keras.models import Model
 
-from rlofc.ofc_environment import OFCEnv
-from rlofc.gamestate_encoder import SelfRankBinaryEncoder
 
 # Experiment params
 ACTIONS = 3
-NUM_CONCURRENT = 2
-NUM_EPISODES = 200
+NUM_CONCURRENT = 4
+MAX_GAMES = 200000
 
-LEARNING_RATE = 0.0001
-t_max = 32
+GAMES_PER_UPDATE = 10
+GAMES_PER_PRINT = 20
+CHECKPOINT_INTERVAL = 1000
+SUMMARY_INTERVAL = 10
+
+LEARNING_RATE = 0.0001 * GAMES_PER_UPDATE
 GAMMA = 0.99
 
 # Path params
 EXPERIMENT_NAME = "rlofc"
 SUMMARY_SAVE_PATH = "summaries/" + EXPERIMENT_NAME
 CHECKPOINT_SAVE_PATH = "/tmp/" + EXPERIMENT_NAME + ".ckpt"
-CHECKPOINT_NAME = "/tmp/" + EXPERIMENT_NAME + ".ckpt-5"
-CHECKPOINT_INTERVAL = 50
-SUMMARY_INTERVAL = 10
+RESTORE = True
+LOG_PATH = "running_reward.txt"
 
 encoder = SelfRankBinaryEncoder()
 INPUT_DIM = encoder.dim
@@ -106,12 +110,15 @@ def build_summary_ops():
     val_summary_placeholder = tf.placeholder("float")
     update_ep_val = ep_avg_v.assign(val_summary_placeholder)
     summary_op = tf.merge_all_summaries()
-    return r_summary_placeholder, update_ep_reward, val_summary_placeholder, update_ep_val, summary_op
+    return (r_summary_placeholder, update_ep_reward, val_summary_placeholder,
+            update_ep_val, summary_op)
 
 
 def a3c_thread(session, thread_index, tf_graph, summary_ops, env, saver):
 
     global TMAX, T
+
+    f = open(LOG_PATH, "a")
 
     # Don't all start asynchronously criticising at once...
     time.sleep(2 * thread_index)
@@ -133,10 +140,14 @@ def a3c_thread(session, thread_index, tf_graph, summary_ops, env, saver):
 
     elapsed_games = 0
 
-    while T < TMAX:
+    s_batch = []
+    a_batch = []
+    R_batch = []
+
+    while T < TMAX and elapsed_games < MAX_GAMES:
         # Per-batch counters
-        s_batch = []
-        a_batch = []
+        s_game = []
+        a_game = []
 
         t = 0
         t_start = 0
@@ -149,8 +160,8 @@ def a3c_thread(session, thread_index, tf_graph, summary_ops, env, saver):
             a_t[action_idx] = 1
 
             # Append state and action to batch
-            s_batch.append(s_t)
-            a_batch.append(a_t)
+            s_game.append(s_t)
+            a_game.append(a_t)
 
             # Take the action and observe
             env.step(action_idx)
@@ -160,33 +171,46 @@ def a3c_thread(session, thread_index, tf_graph, summary_ops, env, saver):
 
             # Increment everything
             t += 1
-            T += 1
             s_t = s_t1
 
-        R_t = r_t1
-        R_d = discount_rewards(R_t, (t - t_start))
+        R_game = discount_rewards(r_t1, (t - t_start))
 
-        running_reward = R_t if running_reward is None \
-            else running_reward * 0.99 + R_t * 0.01
+        running_reward = r_t1 if running_reward is None \
+            else running_reward * 0.99 + r_t1 * 0.01
 
         elapsed_games += 1
+        T += 1
 
-        if elapsed_games % 20 == 0:
-            # print "P, ", np.max(probs), "V ", session.run(value_network, feed_dict={s: [s_t]})[0][0], "R ", running_reward
-            print str(thread_index) + '\t' + str(running_reward) + '\t' + Counter(ep_rewards).__repr__()
+        R_batch.append(R_game)
+        s_batch.append(s_game)
+        a_batch.append(a_game)
+        ep_rewards.append(r_t1)
 
-        # Minimize globally!
-        session.run(minimize, feed_dict={R: R_d,
-                                         a: a_batch,
-                                         s: s_batch})
-        # if R_t > 0:
-        #     print R_d
-        #     print a_batch
-        #     print s_batch
+        if elapsed_games % GAMES_PER_PRINT == 0:
+            # print "P, ", np.max(probs), "V ", session.run(value_network,
+            # feed_dict={s: [s_t]})[0][0], "R ", running_reward
+            print str(thread_index) + '\t' + \
+                str(running_reward) + '\t' + \
+                Counter(ep_rewards).__repr__()
+            f.write(str(thread_index) + ',' +
+                    str(elapsed_games) + ',' +
+                    str(running_reward) + '\n')
+            # print sampling, '\t', observing, '\t', post
 
-        # Tensorboard stuff
-        session.run(update_ep_reward, feed_dict={r_summary_placeholder: R_t})
-        ep_rewards.append(R_t)
+        if elapsed_games % GAMES_PER_UPDATE == 0:
+            # Minimize globally!
+            session.run(minimize, feed_dict={R: np.hstack(R_batch),
+                                             a: np.vstack(a_batch),
+                                             s: np.vstack(s_batch)})
+
+            # Tensorboard stuff
+            # session.run(update_ep_reward,
+            #            feed_dict={r_summary_placeholder: np.hstack(R_batch)})
+
+            s_batch = []
+            a_batch = []
+            R_batch = []
+
         # Reset and reobserve!
         env.reset()
         observation = env.observe()
@@ -206,6 +230,7 @@ def discount_rewards(R, t):
         R_d[i] = R_t
     return R_d
 
+
 def train(session, tf_graph, saver):
     """Set up threaded environments."""
     envs = [OFCEnv([], SelfRankBinaryEncoder) for i in range(NUM_CONCURRENT)]
@@ -214,6 +239,11 @@ def train(session, tf_graph, saver):
     summary_op = summary_ops[-1]
 
     session.run(tf.initialize_all_variables())
+
+    ckpt = tf.train.get_checkpoint_state(CHECKPOINT_SAVE_PATH)
+    if RESTORE and ckpt and ckpt.model_checkpoint_path:
+        saver.restore(session, ckpt.model_checkpoint_path)
+
     writer = tf.train.SummaryWriter(SUMMARY_SAVE_PATH, session.graph)
 
     a3c_threads = [threading.Thread(target=a3c_thread,
@@ -231,6 +261,7 @@ def train(session, tf_graph, saver):
     # Show the agents training and write summary statistics
     last_summary_time = 0
     while True:
+        time.sleep(5)
         now = time.time()
         if now - last_summary_time > SUMMARY_INTERVAL:
             summary_str = session.run(summary_op)
@@ -244,9 +275,10 @@ def train(session, tf_graph, saver):
 def main(_):
     g = tf.Graph()
     with g.as_default(), tf.Session() as session:
-        K.set_session(session)
         graph_ops = build_tf_graph()
         saver = tf.train.Saver()
+
+        K.set_session(session)
 
         train(session, graph_ops, saver)
 
