@@ -7,6 +7,7 @@ import numpy as np
 import os
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
+from collections import Counter
 from keras import backend as K
 from keras.layers import Dense, Input
 from keras.models import Model
@@ -16,12 +17,12 @@ from rlofc.gamestate_encoder import SelfRankBinaryEncoder
 
 # Experiment params
 ACTIONS = 3
-NUM_CONCURRENT = 8
+NUM_CONCURRENT = 2
 NUM_EPISODES = 200
 
-LEARNING_RATE = 3e-5
+LEARNING_RATE = 0.0001
 t_max = 32
-GAMMA = 0.95
+GAMMA = 0.99
 
 # Path params
 EXPERIMENT_NAME = "rlofc"
@@ -121,6 +122,7 @@ def a3c_thread(session, thread_index, tf_graph, summary_ops, env, saver):
     r_summary_placeholder, update_ep_reward, val_summary_placeholder, \
         update_ep_val, summary_op = summary_ops
 
+    ep_rewards = []
     running_reward = None
 
     # Observe and encode game state
@@ -169,16 +171,22 @@ def a3c_thread(session, thread_index, tf_graph, summary_ops, env, saver):
 
         elapsed_games += 1
 
-        if elapsed_games % 100 == 0:
-            print "P, ", np.max(probs), "V ", session.run(value_network, feed_dict={s: [s_t]})[0][0], "R ", running_reward
+        if elapsed_games % 20 == 0:
+            # print "P, ", np.max(probs), "V ", session.run(value_network, feed_dict={s: [s_t]})[0][0], "R ", running_reward
+            print str(thread_index) + '\t' + str(running_reward) + '\t' + Counter(ep_rewards).__repr__()
+
         # Minimize globally!
         session.run(minimize, feed_dict={R: R_d,
                                          a: a_batch,
                                          s: s_batch})
+        # if R_t > 0:
+        #     print R_d
+        #     print a_batch
+        #     print s_batch
 
         # Tensorboard stuff
         session.run(update_ep_reward, feed_dict={r_summary_placeholder: R_t})
-
+        ep_rewards.append(R_t)
         # Reset and reobserve!
         env.reset()
         observation = env.observe()
@@ -192,10 +200,11 @@ def a3c_thread(session, thread_index, tf_graph, summary_ops, env, saver):
 def discount_rewards(R, t):
     """Decay rewards back in time."""
     R_d = np.zeros(t)
+    R_t = R
     for i in reversed(range(t)):
-        R_d[i] = R * (GAMMA ** (i - 1))
+        R_t = GAMMA * R_t
+        R_d[i] = R_t
     return R_d
-
 
 def train(session, tf_graph, saver):
     """Set up threaded environments."""
@@ -214,7 +223,7 @@ def train(session, tf_graph, saver):
                                           summary_ops,
                                           envs[thread_id],
                                           saver))
-                    for thread_id in range(NUM_CONCURRENT)]
+                   for thread_id in range(NUM_CONCURRENT)]
 
     for t in a3c_threads:
         t.start()

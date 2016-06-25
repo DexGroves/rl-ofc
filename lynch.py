@@ -14,7 +14,7 @@ import time
 from keras import backend as K
 from keras.layers import Convolution2D, Flatten, Dense, Input
 from keras.models import Model
-from collections import deque
+from collections import deque, Counter
 from keras import backend as K
 
 from rlofc.ofc_environment import OFCEnv
@@ -37,7 +37,7 @@ SHOW_TRAINING = False
 
 # Experiment params
 ACTIONS = 3
-NUM_CONCURRENT = 8
+NUM_CONCURRENT = 1
 NUM_EPISODES = 200
 
 AGENT_HISTORY_LENGTH = encoder.dim
@@ -116,6 +116,7 @@ def actor_learner_thread(num, env, session, graph_ops, summary_ops, saver):
 
     # Set up per-episode counters
     ep_reward = 0
+    ep_rewards = []
     ep_avg_v = 0
     v_steps = 0
     ep_t = 0
@@ -146,8 +147,9 @@ def actor_learner_thread(num, env, session, graph_ops, summary_ops, saver):
             a_t = np.zeros([ACTIONS])
             a_t[action_index] = 1
 
-            if probs_summary_t % 100 == 0:
-                print "P, ", np.max(probs), "V ", session.run(v_network, feed_dict={s: [s_t]})[0][0], "R ", running_reward
+            if probs_summary_t % 100 == 0 and running_reward is not None:
+                # print "P, ", np.max(probs), "V ", session.run(v_network, feed_dict={s: [s_t]})[0][0], "R ", running_reward
+                print str(num) + '\t' + str(running_reward) + '\t' + Counter(ep_rewards).__repr__()
 
             s_batch.append(s_t)
             a_batch.append(a_t)
@@ -183,6 +185,10 @@ def actor_learner_thread(num, env, session, graph_ops, summary_ops, saver):
         session.run(minimize, feed_dict={R : R_batch,
                                          a : a_batch,
                                          s : s_batch})
+        if R_t > 0:
+            print R_batch
+            print a_batch
+            print s_batch
 
         # Save progress every 5000 iterations
         if T % CHECKPOINT_INTERVAL == 0:
@@ -190,7 +196,7 @@ def actor_learner_thread(num, env, session, graph_ops, summary_ops, saver):
 
         if terminal:
             # Episode ended, collect stats and reset game
-            session.run(update_ep_reward, feed_dict={r_summary_placeholder: ep_reward})
+            # session.run(update_ep_reward, feed_dict={r_summary_placeholder: ep_reward})
             # print "THREAD:", num, "/ TIME", T, "/ REWARD", ep_reward
 
             env.reset()
@@ -203,6 +209,7 @@ def actor_learner_thread(num, env, session, graph_ops, summary_ops, saver):
 
             terminal = False
             # Reset per-episode counters
+            ep_rewards.append(ep_reward)
             ep_reward = 0
             ep_t = 0
 
