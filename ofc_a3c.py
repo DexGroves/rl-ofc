@@ -18,23 +18,24 @@ from keras.models import Model
 
 # Experiment params
 ACTIONS = 3
-NUM_CONCURRENT = 4
+NUM_CONCURRENT = 8
 MAX_GAMES = 200000
 
-GAMES_PER_UPDATE = 10
-GAMES_PER_PRINT = 20
+GAMES_PER_UPDATE = 20
+GAMES_PER_PRINT = 50
 CHECKPOINT_INTERVAL = 1000
-SUMMARY_INTERVAL = 10
+SUMMARY_INTERVAL = 20
 
-LEARNING_RATE = 0.0001 * GAMES_PER_UPDATE
+LEARNING_RATE = 0.0001
 GAMMA = 0.99
 
 # Path params
 EXPERIMENT_NAME = "rlofc"
 SUMMARY_SAVE_PATH = "summaries/" + EXPERIMENT_NAME
-CHECKPOINT_SAVE_PATH = "/tmp/" + EXPERIMENT_NAME + ".ckpt"
+CHECKPOINT_DIR = "/tmp/"
+CHECKPOINT_SAVE_PATH = CHECKPOINT_DIR + EXPERIMENT_NAME + ".ckpt"
 RESTORE = True
-LOG_PATH = "running_reward.txt"
+LOG_PATH = "logs/running_reward"
 
 encoder = SelfRankBinaryEncoder()
 INPUT_DIM = encoder.dim
@@ -118,7 +119,7 @@ def a3c_thread(session, thread_index, tf_graph, summary_ops, env, saver):
 
     global TMAX, T
 
-    f = open(LOG_PATH, "a")
+    f = open(LOG_PATH + str(thread_index), "a")
 
     # Don't all start asynchronously criticising at once...
     time.sleep(2 * thread_index)
@@ -189,9 +190,11 @@ def a3c_thread(session, thread_index, tf_graph, summary_ops, env, saver):
         if elapsed_games % GAMES_PER_PRINT == 0:
             # print "P, ", np.max(probs), "V ", session.run(value_network,
             # feed_dict={s: [s_t]})[0][0], "R ", running_reward
-            print str(thread_index) + '\t' + \
+            print str(thread_index) + '\t' + str(T) + '\t' + \
                 str(running_reward) + '\t' + \
-                Counter(ep_rewards).__repr__()
+                str(np.mean(ep_rewards))
+                # Counter(ep_rewards).__repr__()
+
             f.write(str(thread_index) + ',' +
                     str(elapsed_games) + ',' +
                     str(running_reward) + '\n')
@@ -240,8 +243,9 @@ def train(session, tf_graph, saver):
 
     session.run(tf.initialize_all_variables())
 
-    ckpt = tf.train.get_checkpoint_state(CHECKPOINT_SAVE_PATH)
+    ckpt = tf.train.get_checkpoint_state(CHECKPOINT_DIR)
     if RESTORE and ckpt and ckpt.model_checkpoint_path:
+        print 'restoring...'
         saver.restore(session, ckpt.model_checkpoint_path)
 
     writer = tf.train.SummaryWriter(SUMMARY_SAVE_PATH, session.graph)
