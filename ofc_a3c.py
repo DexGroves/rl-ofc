@@ -18,13 +18,14 @@ from keras.models import Model
 
 # Experiment params
 ACTIONS = 3
-NUM_CONCURRENT = 8
-MAX_GAMES = 200000
+NUM_CONCURRENT = 1
+MAX_GAMES = 2000000
 
 GAMES_PER_UPDATE = 20
 GAMES_PER_PRINT = 50
-CHECKPOINT_INTERVAL = 1000
-SUMMARY_INTERVAL = 20
+CHECKPOINT_INTERVAL = 100000
+SUMMARY_INTERVAL = 200000
+MAX_REWARD_LOG = 100000
 
 LEARNING_RATE = 0.0001
 GAMMA = 0.99
@@ -32,7 +33,7 @@ GAMMA = 0.99
 # Path params
 EXPERIMENT_NAME = "rlofc"
 SUMMARY_SAVE_PATH = "summaries/" + EXPERIMENT_NAME
-CHECKPOINT_DIR = "/tmp/"
+CHECKPOINT_DIR = "checkpoints/"
 CHECKPOINT_SAVE_PATH = CHECKPOINT_DIR + EXPERIMENT_NAME + ".ckpt"
 RESTORE = True
 LOG_PATH = "logs/running_reward"
@@ -54,8 +55,9 @@ def get_networks():
 
         inputs = Input(shape=[INPUT_DIM])
 
-        shared = Dense(100, activation="relu")(inputs)
-        shared = Dense(100, activation="relu")(shared)
+        shared = Dense(500, activation="relu")(inputs)
+        shared = Dense(500, activation="relu")(shared)
+        shared = Dense(500, activation="relu")(shared)
 
         action_probs = Dense(name="p",
                              output_dim=ACTIONS,
@@ -177,7 +179,7 @@ def a3c_thread(session, thread_index, tf_graph, summary_ops, env, saver):
         R_game = discount_rewards(r_t1, (t - t_start))
 
         running_reward = r_t1 if running_reward is None \
-            else running_reward * 0.99 + r_t1 * 0.01
+            else running_reward * 0.999 + r_t1 * 0.001
 
         elapsed_games += 1
         T += 1
@@ -193,22 +195,17 @@ def a3c_thread(session, thread_index, tf_graph, summary_ops, env, saver):
             print str(thread_index) + '\t' + str(T) + '\t' + \
                 str(running_reward) + '\t' + \
                 str(np.mean(ep_rewards))
-                # Counter(ep_rewards).__repr__()
-
-            f.write(str(thread_index) + ',' +
-                    str(elapsed_games) + ',' +
-                    str(running_reward) + '\n')
-            # print sampling, '\t', observing, '\t', post
+            for i in range(GAMES_PER_PRINT):
+                f.write(str(thread_index) + ',' +
+                        str(ep_rewards[-i]) + '\n')
+            if len(ep_rewards) > MAX_REWARD_LOG:
+                ep_rewards = ep_rewards[GAMES_PER_PRINT:]
 
         if elapsed_games % GAMES_PER_UPDATE == 0:
             # Minimize globally!
             session.run(minimize, feed_dict={R: np.hstack(R_batch),
                                              a: np.vstack(a_batch),
                                              s: np.vstack(s_batch)})
-
-            # Tensorboard stuff
-            # session.run(update_ep_reward,
-            #            feed_dict={r_summary_placeholder: np.hstack(R_batch)})
 
             s_batch = []
             a_batch = []
