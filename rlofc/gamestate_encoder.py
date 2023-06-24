@@ -17,6 +17,7 @@ class GamestateEncoder(object):
             if i >= pad:
                 continue
             rank_dummy[i] = card + 1
+        #? What is Hacky standardisation, according to the follow scripts, we can see it imply the mean is 8, and standard deviation is 14.
         rank_dummy_std = (rank_dummy - 8) / 14  # Hacky "standardisation"
         return rank_dummy_std
 
@@ -24,10 +25,15 @@ class GamestateEncoder(object):
     def cards_to_suits(cards):
         suit_dummy = np.zeros(4)
         suit_binaries = np.array([Card.get_suit_int(x) for x in cards])
+        # 1: spades
+        # 2: hearts
+        # 4: diamonds
+        # 8: clubs
         suit_dummy[0] = sum(suit_binaries == 1)
         suit_dummy[1] = sum(suit_binaries == 2)
         suit_dummy[2] = sum(suit_binaries == 4)
         suit_dummy[3] = sum(suit_binaries == 8)
+        #? According to the scripts below, we can see that it imply the mean is 1.5, and standard deviation is 2.
         suit_dummy_std = (suit_dummy - 1.5) / 2  # Hacky "standardisation"
         return suit_dummy_std
 
@@ -42,14 +48,14 @@ class GamestateEncoder(object):
 class GamestateBinaryEncoder(GamestateEncoder):
     """Encode the output of an env.observe as a 1x416 binary matrix.
 
-    [card in front * 52]
-    [card in mid * 52]
-    [card in back * 52]
-    [card in opponent front * 52]
-    [card in opponent mid * 52]
-    [card in opponent back * 52]
-    [card in current card * 52]
-    [card in remaining cards * 52]
+    [card in front * 52]:the front line of myself
+    [card in mid * 52]: the middle line of myself
+    [card in back * 52]: the back line of my self
+    [card in opponent front * 52]: the fron line of the oppo
+    [card in opponent mid * 52]: the mid line of the oppo
+    [card in opponent back * 52]: the back line of the oppo
+    [card in current card * 52]: all the cards appear on the table
+    [card in remaining cards * 52]: the remaining cards not on the table
     """
     def __init__(self):
         self.dim = 146
@@ -63,22 +69,22 @@ class GamestateRankSuitEncoder(GamestateEncoder):
     Loses some info on the exact suit identity of cards, but much
     smaller than a GamestateBinaryEncoder representation.
 
-    [rank of cards in front * 3]
-    [rank of cards in mid * 5]
-    [rank of cards in back * 5]
-    [spade, heart, diamond, club count in front * 4]
-    [spade, heart, diamond, club count in mid * 4]
-    [spade, heart, diamond, club count in back * 4]
-    [rank of cards in opponent front * 3]
-    [rank of cards in opponent mid * 5]
-    [rank of cards in opponent back * 5]
-    [spade, heart, diamond, club count in opponent front * 4]
-    [spade, heart, diamond, club count in opponent mid * 4]
-    [spade, heart, diamond, club count in opponent back * 4]
-    [rank of current card * 1]
-    [spade, heart, diamond, club of current card * 4]
-    [rank of remaining cards * 4]
-    [spade, heart, diamond, club of remaining cards * 4]
+    [rank of cards in front * 3]: 前排放 3 張
+    [rank of cards in mid * 5]: 中排放 5 張
+    [rank of cards in back * 5]: 後排放 5 張
+    [spade, heart, diamond, club count in front * 4]: 計算前排花色
+    [spade, heart, diamond, club count in mid * 4]: 計算中排花色
+    [spade, heart, diamond, club count in back * 4]: 計算後排花色
+    [rank of cards in opponent front * 3]: 對手前排 3 張
+    [rank of cards in opponent mid * 5]: 對手中排 5 張
+    [rank of cards in opponent back * 5]: 對手後排 5 張
+    [spade, heart, diamond, club count in opponent front * 4]: 計算對手前排花色
+    [spade, heart, diamond, club count in opponent mid * 4]: 計算對手中排花色
+    [spade, heart, diamond, club count in opponent back * 4]: 計算對手後排花色
+    [rank of current card * 1]: 開牌第一張數字
+    [spade, heart, diamond, club of current card * 4]: 開牌第一章的花色
+    [rank of remaining cards * 4]: 剩餘 4 張數字
+    [spade, heart, diamond, club of remaining cards * 4]: 剩餘 4 張的花色
     [free street binaries]
     """
     def __init__(self):
