@@ -61,15 +61,18 @@ class RoyaltyCalculator(object):
         if len(cards) != 3:
             raise ValueError("Incorrect number of cards!")
 
+        # Transfer cards into int
         ranks = [Card.get_rank_int(x) for x in cards]
         ctr = collections.Counter(ranks)
+        # rank: card int, count: number of card
+        # rank = 0, mean 2 in card
         rank, count = ctr.most_common()[0]
 
         if count < 2:
-            return 0
+            return 0 # no pairs
 
         if count == 2:
-            return max(0, rank - 3)
+            return max(0, rank - 3) # one pair
 
         if count == 3:
-            return 10 + rank
+            return 10 + rank # Three-of-a-kind
