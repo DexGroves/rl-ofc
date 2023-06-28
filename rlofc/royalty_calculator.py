@@ -38,7 +38,8 @@ class RoyaltyCalculator(object):
             return 15  # Straight flush
 
         if rank == 1:
-            return 35  # Royal flush
+            
+            return 25  # Royal flush 25
 
     @staticmethod
     def score_mid_royalties(cards):
