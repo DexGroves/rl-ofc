@@ -1,34 +1,56 @@
 import random
-from rlofc.deck_generator import DeckGenerator
-from rlofc.ofc_board import OFCBoard
+from rlofc.rlofc.deck_generator import DeckGenerator
+from rlofc.rlofc.ofc_board import OFCBoard
+import numpy as np
 
 
 class OFCEnv(object):
     """Handle an OFC game in a manner condusive to PG RL."""
 
-    def __init__(self, opponent, encoder_class=None):
+    def __init__(self, opponent_1, num_opponent = 1, encoder_class=None):
+        self.num_oppo = num_opponent
         if encoder_class is not None:
             self.encoder = encoder_class()
-        self.opponent = opponent
+
+        if self.num_oppo == 1:
+            # 2 players, 1 opponent
+            self.opponent_1 = opponent_1
+        
+        if self.num_oppo == 2:
+            # 3 players, 2 opponents
+            pass
+
         self.reset()
 
+
     def reset(self):
-        self.plyr_board = OFCBoard()
-        self.oppo_board = OFCBoard()
+        if self.num_oppo == 1:
+            self.plyr_board = OFCBoard()
+            self.oppo_board = OFCBoard()
 
-        self.game_over = False
-        self.reward = 0
+            self.game_over = False
+            self.reward = 0
 
-        self.deck = DeckGenerator.new_deck()
-        self.plyr_cards = sorted(self.deck[0:5])
-        self.oppo_cards = sorted(self.deck[6:11])
+            self.deck = DeckGenerator.new_deck()
+            # self.plyr_cards = sorted(self.deck[0:5])
+            # self.oppo_cards = sorted(self.deck[5:10])
+            self.plyr_cards = self.deck[0:5]
+            self.oppo_cards = self.deck[5:10]
 
-        self.current_card = self.plyr_cards.pop()
+            # self.current_card = self.plyr_cards.pop()
 
-        self.plyr_goes_first = random.choice([0, 1])
+            # each round draw three card from the deck, players have to choose 2 from 3 and drop the additional 1.
+            self.current_card = random.choices(self.deck[10:], k = 6)
 
-        if self.plyr_goes_first == 0:
-            self.execute_opponent_turn()
+            self.plyr_goes_first = random.choice([0, 1])
+
+            if self.plyr_goes_first == 0:
+                # oppo goes first
+                self.execute_opponent_turn()
+            
+            else:
+                # I go first
+                pass
 
     def step(self, action):
         """Advance the game state by one decision."""
@@ -53,6 +75,7 @@ class OFCEnv(object):
                       self.plyr_cards,    # i.e. remaining starting hand
                       self.game_over,     # Whether the game is over
                       self.reward)        # Score, or None
+        
         return game_state
 
     def execute_opponent_turn(self):
@@ -85,9 +108,9 @@ class OFCEnv(object):
             score = plyr_royalties + 6
 
         else:
-            exch = self.calculate_scoop(self.plyr_board,
+            each = self.calculate_scoop(self.plyr_board,
                                         self.oppo_board)
-            score = exch + plyr_royalties - oppo_royalties
+            score = each + plyr_royalties - oppo_royalties
 
         return score
 

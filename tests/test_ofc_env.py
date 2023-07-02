@@ -1,5 +1,5 @@
 import random
-from rlofc.ofc_environment import OFCEnv
+from rlofc.rlofc.ofc_environment import OFCEnv
 
 
 def test_ofc_env():

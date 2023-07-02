@@ -1,6 +1,6 @@
-from deuces import Card
-from rlofc.royalty_calculator import RoyaltyCalculator
-from rlofc.ofc_evaluator import OFCEvaluator
+from treys import Card
+from rlofc.rlofc.royalty_calculator import RoyaltyCalculator
+from rlofc.rlofc.ofc_evaluator import OFCEvaluator
 
 
 evaluator = OFCEvaluator()
@@ -15,7 +15,12 @@ class OFCHand(object):
         self.cards = [Card.new(x) for x in card_strs]
 
     def add_card(self, new_card_str):
+        # if len(new_card_str)==1:
         self.cards.append(Card.new(new_card_str))
+
+        # else:
+        #     for i in new_card_str:
+        #         self.cards.append(Card.new(i))
 
     def length(self):
         return len(self.cards)
@@ -36,11 +41,11 @@ class OFCBoard(object):
         self.back = OFCHand([])
 
     def pretty(self):
-        print 'Front:'
+        print('Front:')
         Card.print_pretty_cards(self.front.cards)
-        print 'Mid:'
+        print('Mid:')
         Card.print_pretty_cards(self.mid.cards)
-        print 'Back:'
+        print('Back:')
         Card.print_pretty_cards(self.back.cards)
 
     def get_royalties(self):
@@ -99,3 +104,15 @@ class OFCBoard(object):
             return False
 
         return True
+    
+    def is_fantasy(self):
+        if self.is_foul():
+            return False
+        
+        if self.front.get_rank() >= \
+                self.mid.get_rank() >= \
+                self.back.get_rank():
+            return True
+        
+        return False
+
